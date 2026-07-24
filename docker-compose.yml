@@ -2,6 +2,8 @@ services:
   backend:
     build:
       context: ./backend
+    env_file:
+      - ./backend/.env
     ports:
       - "8000:8000"
     volumes:
@@ -13,6 +15,8 @@ services:
       redis:
         condition: service_started
       qdrant:
+        condition: service_started
+      ollama:
         condition: service_started
 
   frontend:
@@ -59,7 +63,17 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: sentinel-ai-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
   qdrant_data:
+  ollama_data:

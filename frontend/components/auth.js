@@ -22,17 +22,24 @@ export function AuthCard({ mode }) {
   });
 
   const copy = {
-    login: [
-      "Welcome back",
-      "Sign in to your Sentinel workspace.",
-      "Sign In",
-    ],
-    register: [
-      "Create your workspace",
-      "Start routing with confidence.",
-      "Create Account",
-    ],
-  }[mode];
+  login: [
+    "Welcome back",
+    "Sign in to your Sentinel workspace.",
+    "Sign In",
+  ],
+
+  register: [
+    "Create your workspace",
+    "Start routing with confidence.",
+    "Create Account",
+  ],
+
+  forgot: [
+    "Forgot Password",
+    "Enter your email to receive a reset link.",
+    "Send Reset Link",
+  ],
+}[mode];
 
   function update(e) {
     setForm({
@@ -43,6 +50,12 @@ export function AuthCard({ mode }) {
 
   async function submit(e) {
     e.preventDefault();
+
+    if (loading) return;
+    if (mode === "register" && form.password.length < 8) {
+      setError("Use a password with at least 8 characters.");
+      return;
+    }
 
     setLoading(true);
     setError("");

@@ -33,15 +33,16 @@ AsyncSessionFactory = (
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """Yield a request-scoped session and safely roll back failed work."""
+    """Yield a request-scoped database session."""
+
     if AsyncSessionFactory is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database dependency is not installed",
         )
+
     async with AsyncSessionFactory() as session:
         try:
             yield session
-        except Exception:
-            await session.rollback()
-            raise
+        finally:
+            await session.close()

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   clearSession,
   getUser,
@@ -11,6 +12,7 @@ import {
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  const router = useRouter();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -20,6 +22,16 @@ export function AuthProvider({ children }) {
     }
     setLoading(false);
   }, []);
+
+  useEffect(() => {
+    const expire = () => {
+      clearSession();
+      setUser(null);
+      router.replace("/login?reason=expired");
+    };
+    window.addEventListener("sentinel:session-expired", expire);
+    return () => window.removeEventListener("sentinel:session-expired", expire);
+  }, [router]);
 
   const login = (session) => {
     saveSession(session);

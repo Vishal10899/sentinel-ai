@@ -1,5 +1,6 @@
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  "http://backend:8000/api/v1";
 
 function accessToken() {
   if (typeof window === "undefined") return null;
@@ -26,6 +27,9 @@ async function request(endpoint, options = {}) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
+    if (response.status === 401 && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("sentinel:session-expired"));
+    }
     throw new Error(data.detail || "Something went wrong");
   }
 
@@ -41,6 +45,25 @@ export const api = {
 
   providerHealth() {
     return request("/health/providers");
+  },
+
+  workspaceAnalytics() {
+    return request("/analytics");
+  },
+
+  history(query = "") {
+    return request(`/history${query ? `?query=${encodeURIComponent(query)}` : ""}`);
+  },
+
+  configureProvider(providerId, payload) {
+    return request(`/providers/${encodeURIComponent(providerId)}/configuration`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  testProvider(providerId) {
+    return request(`/providers/${encodeURIComponent(providerId)}/test`, { method: "POST" });
   },
 
   databaseHealth() {
@@ -85,6 +108,31 @@ export const api = {
       body: JSON.stringify(payload),
     });
   },
+  /* ---------------- CONVERSATIONS ---------------- */
+
+createConversation(payload) {
+  return request("/conversations", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+},
+
+getConversations() {
+  return request("/conversations");
+},
+
+/* ---------------- CHAT ---------------- */
+
+sendMessage(payload) {
+  return request("/chat", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+},
+
+getMessages(conversationId) {
+  return request(`/chat/${conversationId}/messages`);
+},
 
   /* ---------------- AUTH ---------------- */
 

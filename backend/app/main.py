@@ -1,10 +1,19 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routers import auth_router, catalog_router, cost_router, health_router, routing_router, workspace_router
+from app.api.routers import (
+    auth_router,
+    chat_router,
+    cost_router,
+    health_router,
+    providers_router,
+    routing_router,
+    workspace_router,
+)
 from app.core.lifecycle import lifespan
 from app.core.logging import RequestLoggingMiddleware, configure_logging
 from app.core.settings import settings
+from app.api.routers.conversation import router as conversation_router
 
 
 # Configure logging once before application startup.
@@ -32,8 +41,14 @@ app.add_middleware(RequestLoggingMiddleware)
 
 # All public API endpoints are versioned from their first release.
 app.include_router(health_router, prefix=settings.api_v1_prefix)
-app.include_router(catalog_router, prefix=settings.api_v1_prefix)
+# app.include_router(catalog_router, prefix=settings.api_v1_prefix)
+app.include_router(providers_router, prefix=settings.api_v1_prefix)
 app.include_router(routing_router, prefix=settings.api_v1_prefix)
 app.include_router(cost_router, prefix=settings.api_v1_prefix)
 app.include_router(auth_router, prefix=settings.api_v1_prefix)
 app.include_router(workspace_router, prefix=settings.api_v1_prefix)
+app.include_router(chat_router, prefix=settings.api_v1_prefix)
+app.include_router(
+    conversation_router,
+    prefix=settings.api_v1_prefix,
+)

@@ -6,6 +6,9 @@ from pydantic import BaseModel, Field, model_validator
 
 from app.routing.types import TaskCategory
 
+from datetime import datetime
+
+
 
 class ProviderResponse(BaseModel):
     provider_id: str
@@ -107,11 +110,17 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+class UserResponse(BaseModel):
+    user_id: str
+    name: str
+    email: str
+
+
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str
-    user: dict[str, str]
+    user: UserResponse
 
 
 class PlaygroundRequest(BaseModel):
@@ -126,3 +135,39 @@ class ProviderConfigRequest(BaseModel):
     api_key: str | None = Field(default=None, max_length=500)
     model: str | None = Field(default=None, max_length=200)
     enabled: bool = True
+ 
+
+class CreateConversationRequest(BaseModel):
+    title: str = Field(
+        default="New Conversation",
+        max_length=200,
+    )
+
+
+class ConversationResponse(BaseModel):
+    id: str
+    workspace_id: str
+    title: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class MessageResponse(BaseModel):
+    id: str
+    conversation_id: str
+    role: str
+    content: str
+    provider: str | None = None
+    model: str | None = None
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    cost: float
+    latency_ms: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
