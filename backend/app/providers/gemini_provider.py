@@ -16,15 +16,18 @@ class GeminiProvider(BaseProvider):
 
     def _init_client(self) -> None:
         if self._api_key and str(self._api_key).strip():
-            from google import genai
-            clean_url = sanitize_base_url(self._base_url, self.DEFAULT_BASE_URL)
-            if clean_url and clean_url != self.DEFAULT_BASE_URL:
-                try:
-                    self._client = genai.Client(api_key=self._api_key, http_options={"api_option": clean_url})
-                except Exception:
+            try:
+                from google import genai
+                clean_url = sanitize_base_url(self._base_url, self.DEFAULT_BASE_URL)
+                if clean_url and clean_url != self.DEFAULT_BASE_URL:
+                    try:
+                        self._client = genai.Client(api_key=self._api_key, http_options={"api_option": clean_url})
+                    except Exception:
+                        self._client = genai.Client(api_key=self._api_key)
+                else:
                     self._client = genai.Client(api_key=self._api_key)
-            else:
-                self._client = genai.Client(api_key=self._api_key)
+            except Exception:
+                self._client = None
         else:
             self._client = None
 

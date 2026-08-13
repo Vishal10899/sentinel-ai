@@ -1,6 +1,7 @@
 """Authentication endpoints."""
 
-from fastapi import APIRouter, Depends
+import logging
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import current_user
@@ -13,6 +14,8 @@ from app.api.schemas import (
 from app.auth.service import auth_service
 from app.db.session import get_db
 from app.models.user import User
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/auth",
@@ -29,14 +32,24 @@ async def register(
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, object]:
 
-    user = await auth_service.register(
-        db=db,
-        name=request.name,
-        email=request.email,
-        password=request.password,
-    )
-
-    return auth_service.token_pair(user)
+    try:
+        user = await auth_service.register(
+            db=db,
+            name=request.name,
+            email=request.email,
+            password=request.password,
+        )
+        return auth_service.token_pair(user)
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        logger.error(f"Registration failed: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Registration failed: {str(e)}",
+        )
 
 
 @router.post(
@@ -48,13 +61,23 @@ async def login(
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, object]:
 
-    user = await auth_service.login(
-        db=db,
-        email=request.email,
-        password=request.password,
-    )
-
-    return auth_service.token_pair(user)
+    try:
+        user = await auth_service.login(
+            db=db,
+            email=request.email,
+            password=request.password,
+        )
+        return auth_service.token_pair(user)
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        logger.error(f"Login failed: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
 
 
 @router.post(
@@ -66,10 +89,19 @@ async def refresh(
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, object]:
 
-    return await auth_service.refresh(
-        db=db,
-        refresh_token=request.refresh_token,
-    )
+    try:
+        return await auth_service.refresh(
+            db=db,
+            refresh_token=request.refresh_token,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Token refresh failed: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
 
 
 @router.post(
@@ -80,9 +112,12 @@ async def logout(
     request: RefreshRequest,
 ) -> None:
 
-    await auth_service.logout(
-        request.refresh_token,
-    )
+    try:
+        await auth_service.logout(
+            request.refresh_token,
+        )
+    except Exception as e:
+        logger.error(f"Logout failed: {str(e)}", exc_info=True)
 
 
 @router.get("/me")
@@ -90,4 +125,11 @@ async def me(
     user: User = Depends(current_user),
 ) -> dict[str, object]:
 
-    return auth_service.get_user_context(user)
+    try:
+        return auth_service.get_user_context(user)
+    except Exception as e:
+        logger.error(f"Failed to fetch user context: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch user context: {str(e)}",
+        )

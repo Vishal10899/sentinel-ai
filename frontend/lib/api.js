@@ -1,9 +1,18 @@
 export const getApiBaseUrl = () => {
-  const envUrl = (typeof process !== "undefined" && process.env && (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL)) || "http://localhost:8000/api/v1";
-  return envUrl.endsWith("/api/v1") ? envUrl : `${envUrl.replace(/\/+$/, "")}/api/v1`;
+  const envUrl = typeof process !== "undefined" && process.env && (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL);
+  if (envUrl) {
+    return envUrl.endsWith("/api/v1") ? envUrl : `${envUrl.replace(/\/+$/, "")}/api/v1`;
+  }
+  if (typeof window !== "undefined" && window.location) {
+    const protocol = window.location.protocol || "http:";
+    const hostname = window.location.hostname || "localhost";
+    return `${protocol}//${hostname}:8000/api/v1`;
+  }
+  return "http://localhost:8000/api/v1";
 };
 
 export const API_BASE_URL = getApiBaseUrl();
+
 
 
 function accessToken() {
@@ -18,8 +27,9 @@ function refreshToken() {
 
 async function request(endpoint, options = {}, isRetry = false) {
   const token = accessToken();
+  const baseUrl = getApiBaseUrl();
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const response = await fetch(`${baseUrl}${endpoint}`, {
     cache: "no-store",
     ...options,
     headers: {
@@ -416,7 +426,8 @@ export const api = {
   uploadFile(file) {
     const formData = new FormData();
     formData.append("file", file);
-    return fetch(`${API_BASE_URL}/files/upload`, {
+    const baseUrl = getApiBaseUrl();
+    return fetch(`${baseUrl}/files/upload`, {
       method: "POST",
       body: formData,
     }).then((res) => {

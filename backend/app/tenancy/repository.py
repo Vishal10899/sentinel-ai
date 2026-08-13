@@ -79,6 +79,26 @@ class TenancyRepository:
         self._invitations[inv_id] = inv
         return inv
 
+    def create_membership(
+        self,
+        org_id: str,
+        workspace_id: str,
+        user_id: str,
+        role_id: str = "role-developer",
+        status: str = "ACTIVE",
+    ) -> Membership:
+        mem_id = f"mem-{str(uuid4())[:8]}"
+        membership = Membership(
+            id=mem_id,
+            org_id=org_id,
+            workspace_id=workspace_id,
+            user_id=user_id,
+            role_id=role_id,
+            status=status,
+        )
+        self._memberships[mem_id] = membership
+        return membership
+
     def accept_invitation(self, token: str, user_id: str) -> Membership | None:
         inv = next((i for i in self._invitations.values() if i.token == token and i.status == "PENDING"), None)
         if not inv:
@@ -95,6 +115,74 @@ class TenancyRepository:
         if org_id:
             mems = [m for m in mems if m.org_id == org_id]
         return mems
+
+    def get_pending_invitation(self, email: str) -> Invitation | None:
+        """Find pending invitation by email."""
+        clean_email = email.strip().lower()
+        return next(
+            (i for i in self._invitations.values() if i.email.strip().lower() == clean_email and i.status == "PENDING"),
+            None,
+        )
+
+    def delete_organization(self, org_id: str) -> bool:
+        """Delete organization and attached workspaces/memberships (for rollback/cleanup)."""
+        if org_id in self._orgs:
+            del self._orgs[org_id]
+            self._workspaces = {k: v for k, v in self._workspaces.items() if v.org_id != org_id}
+            self._memberships = {k: v for k, v in self._memberships.items() if v.org_id != org_id}
+            return True
+        return False
+
+    def delete_workspace(self, workspace_id: str) -> bool:
+        """Delete workspace by ID."""
+        if workspace_id in self._workspaces:
+            del self._workspaces[workspace_id]
+            self._memberships = {k: v for k, v in self._memberships.items() if v.workspace_id != workspace_id}
+            return True
+        return False
+
+    def delete_membership(self, mem_id: str) -> bool:
+        """Delete membership by ID."""
+        if mem_id in self._memberships:
+            del self._memberships[mem_id]
+            return True
+        return False
+
+    def delete_user_memberships(self, user_id: str) -> None:
+        """Delete all memberships for a user (for rollback)."""
+        self._memberships = {k: v for k, v in self._memberships.items() if v.user_id != user_id}
+
+    def get_user_membership(self, user_id: str, org_id: str | None = None) -> Membership | None:
+        """Get primary or org-scoped membership for a user."""
+        for m in self._memberships.values():
+            if m.user_id == user_id:
+                if org_id is None or m.org_id == org_id:
+                    return m
+        return None
+
+    def list_user_organizations(self, user_id: str) -> list[Organization]:
+        """List organizations the user owns or is a member of."""
+        owned_org_ids = {o.id for o in self._orgs.values() if o.owner_id == user_id}
+        member_org_ids = {m.org_id for m in self._memberships.values() if m.user_id == user_id}
+        all_org_ids = owned_org_ids.union(member_org_ids)
+        return [o for o in self._orgs.values() if o.id in all_org_ids]
+
+    def list_user_workspaces(self, user_id: str) -> list[WorkspaceTenant]:
+        """List workspaces the user owns or is a member of."""
+        user_orgs = {o.id for o in self.list_user_organizations(user_id)}
+        owned_ws = [w for w in self._workspaces.values() if w.owner_id == user_id]
+        member_ws = [w for w in self._workspaces.values() if w.org_id in user_orgs]
+        seen = set()
+        result = []
+        for w in owned_ws + member_ws:
+            if w.id not in seen:
+                seen.add(w.id)
+                result.append(w)
+        return result
+
+    def register_workspace(self, ws: WorkspaceTenant) -> None:
+        """Register or update a workspace instance."""
+        self._workspaces[ws.id] = ws
 
     def configure_sso_provider(self, org_id: str, provider_type: str, issuer_url: str, client_id: str) -> IdentityProvider:
         sso_id = f"sso-{str(uuid4())[:8]}"

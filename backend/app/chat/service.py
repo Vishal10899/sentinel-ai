@@ -267,6 +267,7 @@ class ChatService:
                 "conversation_id": data.conversation_id,
                 "provider": provider_id,
                 "model": model_id,
+                "response": cache_hit["response_text"],
                 "cost_usd": 0.0,
                 "latency_ms": 1,
                 "cache_hit": True,

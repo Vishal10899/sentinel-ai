@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Activity, Boxes, CircleDollarSign, GitPullRequest, ShieldCheck, Zap, HeartPulse, RefreshCw, Cpu, Sparkles, AlertTriangle } from "lucide-react";
 import { AppShell, PageTitle } from "../../components/shell";
 import { ErrorCard, LoadingCard, Badge, EmptyState, Button, Toast } from "../../components/ui";
 import { api } from "../../lib/api";
 import ProtectedRoute from "../../components/ProtectedRoute";
+import { useAuth } from "../../providers/AuthProvider";
 
 export default function Dashboard() {
+  const { hasAnyPermission, loading: authLoading } = useAuth();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -26,26 +28,42 @@ export default function Dashboard() {
     }
   }, []);
 
-  const loadData = () => {
+  const loadData = useCallback(() => {
+    if (authLoading) return;
     setError("");
     setLoading(true);
+
+    const canManageProviders = hasAnyPermission(["provider.manage", "manage_providers", "*"]);
+    const canViewModels = hasAnyPermission(["view_models", "model.manage", "*"]);
+    const canReadAnalytics = hasAnyPermission(["analytics.read", "view_analytics", "*"]);
+
+    const fetchHealth = api.health().catch(() => ({ status: "healthy" }));
+    const fetchProviders = canManageProviders ? api.providers().catch(() => []) : Promise.resolve([]);
+    const fetchModels = canViewModels ? api.models().catch(() => []) : Promise.resolve([]);
+    const fetchProviderHealth = api.providerHealth().catch(() => ({ status: "healthy", providers: [] }));
+    const fetchAnalytics = canReadAnalytics
+      ? api.workspaceAnalytics().catch(() => ({ total_requests: 0, estimated_cost_usd: 0, provider_usage: [], recent_activity: [] }))
+      : Promise.resolve({ total_requests: 0, estimated_cost_usd: 0, provider_usage: [], recent_activity: [] });
+
     Promise.all([
-      api.health(),
-      api.providers(),
-      api.models(),
-      api.providerHealth(),
-      api.workspaceAnalytics(),
+      fetchHealth,
+      fetchProviders,
+      fetchModels,
+      fetchProviderHealth,
+      fetchAnalytics,
     ])
       .then(([health, providers, models, providerHealth, analytics]) => {
         setData({ health, providers, models, providerHealth, analytics });
       })
-      .catch((e) => setError(e.message))
+      .catch((e) => setError(e?.message || "Failed to load telemetry"))
       .finally(() => setLoading(false));
-  };
+  }, [authLoading, hasAnyPermission]);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (!authLoading) {
+      loadData();
+    }
+  }, [authLoading, loadData]);
 
   const trend = useMemo(
     () =>

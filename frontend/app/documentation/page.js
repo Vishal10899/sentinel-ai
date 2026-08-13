@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { AppShell, PageTitle } from "../../components/shell";
 import { Badge, Button, Toast } from "../../components/ui";
-import { API_BASE_URL } from "../../lib/api";
+import { API_BASE_URL, getApiBaseUrl } from "../../lib/api";
 
 const docSections = [
   {
@@ -157,7 +157,7 @@ export default function DocumentationPage() {
   const [toastMessage, setToastMessage] = useState(null);
   const [activeTab, setActiveTab] = useState("all");
 
-  const openApiUrl = `${API_BASE_URL.replace("/api/v1", "")}/docs`;
+  const openApiUrl = `${getApiBaseUrl().replace("/api/v1", "")}/docs`;
 
   const copyToClipboard = (code, id) => {
     navigator.clipboard.writeText(code);
@@ -253,7 +253,7 @@ export default function DocumentationPage() {
 
             <div className="border-t border-[var(--border-color)] pt-3 px-2">
               <span className="text-[11px] text-[var(--text-muted)] block">Base API URL:</span>
-              <code className="text-[10px] font-mono text-indigo-400 block mt-1 truncate">{API_BASE_URL}</code>
+              <code className="text-[10px] font-mono text-indigo-400 block mt-1 truncate">{getApiBaseUrl()}</code>
             </div>
           </aside>
 

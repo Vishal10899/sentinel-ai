@@ -76,25 +76,58 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-# Browser clients are limited to the configured, explicit origins or ALLOWED_ORIGINS env var.
-raw_allowed_origins = os.environ.get("ALLOWED_ORIGINS") or os.environ.get("SENTINEL_AI_ALLOWED_ORIGINS")
-if raw_allowed_origins:
-    allowed_origins = [o.strip() for o in raw_allowed_origins.split(",") if o.strip()]
-else:
-    allowed_origins = settings.cors_origins
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_origin_regex=r"https?://.*",
-    allow_credentials=settings.cors_allow_credentials,
-    allow_methods=settings.cors_allow_methods,
-    allow_headers=settings.cors_allow_headers,
+# Browser clients are limited to configured origins, environment variables, or local developer defaults.
+raw_origins = (
+    os.environ.get("ALLOWED_ORIGINS")
+    or os.environ.get("SENTINEL_AI_ALLOWED_ORIGINS")
+    or os.environ.get("SENTINEL_AI_CORS_ORIGINS")
 )
 
+if raw_origins:
+    if raw_origins.startswith("[") and raw_origins.endswith("]"):
+        import json
+        try:
+            parsed = json.loads(raw_origins)
+            if isinstance(parsed, list):
+                allowed_origins = [str(o).strip() for o in parsed if str(o).strip()]
+            else:
+                allowed_origins = [raw_origins.strip()]
+        except Exception:
+            allowed_origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
+    else:
+        allowed_origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
+else:
+    allowed_origins = list(settings.cors_origins)
+
+# Guaranteed fallback for local frontend development
+default_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost",
+    "http://127.0.0.1",
+]
+for default_origin in default_origins:
+    if default_origin not in allowed_origins:
+        allowed_origins.append(default_origin)
+
+allow_origin_regex = None
+if "*" in allowed_origins:
+    allowed_origins = [o for o in allowed_origins if o != "*"]
+    allow_origin_regex = r".*"
 
 # Log each request independently of endpoint implementation details.
 app.add_middleware(RequestLoggingMiddleware)
+
+# Add CORSMiddleware as outermost middleware to wrap all responses including preflights and exceptions
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_origin_regex=allow_origin_regex,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 from fastapi.responses import PlainTextResponse
 from app.core.metrics import metrics_exporter

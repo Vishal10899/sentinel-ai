@@ -12,6 +12,7 @@ class WorkspaceService:
         db: AsyncSession,
         owner_id: str,
         owner_name: str,
+        commit: bool = True,
     ) -> Workspace:
 
         slug = (
@@ -30,7 +31,8 @@ class WorkspaceService:
 
         db.add(workspace)
 
-        await db.commit()
+        if commit:
+            await db.commit()
 
         return workspace
 

@@ -1,7 +1,7 @@
 import asyncio
 import json
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -223,13 +223,15 @@ def test_9_ollama_execution(test_client):
     """Test 9: Real/mock Ollama execution through gateway."""
     raw_secret, key_obj = virtual_key_repository.create_key(workspace_id="default", name="Ollama Test Key")
     headers = {"Authorization": f"Bearer {raw_secret}"}
-    payload = {"model": "ollama/llama3.2", "messages": [{"role": "user", "content": "Hi"}], "stream": False}
+    payload = {"model": "ollama/llama3.2", "messages": [{"role": "user", "content": "Tell me a local story"}], "stream": False}
 
     provider_manager.configure("ollama", enabled=True, base_url="http://127.0.0.1:11434", status="healthy")
 
     mock_ollama = AsyncMock()
     mock_ollama.name = "ollama"
-    mock_ollama.generate = AsyncMock(return_value="Ollama local response text")
+    async def mock_o(prompt, **kwargs):
+        return "Ollama local response text"
+    mock_ollama.generate = mock_o
 
     with patch.object(provider_manager, "get", return_value=mock_ollama), patch.object(provider_manager, "is_active", return_value=True):
         res = test_client.post("/v1/chat/completions", headers=headers, json=payload)

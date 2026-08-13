@@ -56,6 +56,28 @@ class Settings(BaseSettings):
     bootstrap_admin_email: str = "admin@sentinel.ai"
     bootstrap_admin_password: str = "admin123"
 
+    bootstrap_super_admin_email_1: str = "Vishalkumar75912@gmail.com"
+    bootstrap_super_admin_password_1: str | None = None
+    bootstrap_super_admin_name_1: str = "Vishal Kumar"
+
+    bootstrap_super_admin_email_2: str = "Vishalchaudhary74096@gmail.com"
+    bootstrap_super_admin_password_2: str | None = None
+    bootstrap_super_admin_name_2: str = "Vishal Chaudhary"
+    bootstrap_super_admin_title_2: str = "Founder"
+
+    @property
+    def super_admin_emails(self) -> list[str]:
+        raw = [
+            self.bootstrap_admin_email,
+            self.bootstrap_super_admin_email_1,
+            self.bootstrap_super_admin_email_2,
+        ]
+        return [e.strip().lower() for e in raw if e and isinstance(e, str) and e.strip()]
+
+    def is_super_admin_email(self, email: str | None) -> bool:
+        if not email or not isinstance(email, str):
+            return False
+        return email.strip().lower() in self.super_admin_emails
 
     def model_post_init(self, __context) -> None:
         import os
@@ -63,6 +85,16 @@ class Settings(BaseSettings):
             self.gemini_api_key = os.environ.get("GEMINI_API_KEY")
         if not self.openai_api_key:
             self.openai_api_key = os.environ.get("OPENAI_API_KEY")
+
+        # Support non-prefixed environment variable overrides for Super Admins
+        self.bootstrap_super_admin_email_1 = os.environ.get("BOOTSTRAP_SUPER_ADMIN_EMAIL_1", self.bootstrap_super_admin_email_1)
+        self.bootstrap_super_admin_password_1 = os.environ.get("BOOTSTRAP_SUPER_ADMIN_PASSWORD_1", self.bootstrap_super_admin_password_1)
+        self.bootstrap_super_admin_name_1 = os.environ.get("BOOTSTRAP_SUPER_ADMIN_NAME_1", self.bootstrap_super_admin_name_1)
+
+        self.bootstrap_super_admin_email_2 = os.environ.get("BOOTSTRAP_SUPER_ADMIN_EMAIL_2", self.bootstrap_super_admin_email_2)
+        self.bootstrap_super_admin_password_2 = os.environ.get("BOOTSTRAP_SUPER_ADMIN_PASSWORD_2", self.bootstrap_super_admin_password_2)
+        self.bootstrap_super_admin_name_2 = os.environ.get("BOOTSTRAP_SUPER_ADMIN_NAME_2", self.bootstrap_super_admin_name_2)
+        self.bootstrap_super_admin_title_2 = os.environ.get("BOOTSTRAP_SUPER_ADMIN_TITLE_2", self.bootstrap_super_admin_title_2)
 
     # Local development may override defaults with backend/.env. Environment
     # variables take precedence and use the SENTINEL_AI_ prefix.

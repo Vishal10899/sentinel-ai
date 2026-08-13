@@ -38,7 +38,7 @@ def test_register_and_workspace_creation(test_db):
     """Verify registration, password hashing, DB insert, workspace creation, and JWT output."""
     register_payload = {
         "name": "Sentinel Admin",
-        "email": "admin@sentinel.ai",
+        "email": "auth_admin_unique@sentinel.ai",
         "password": "SecurePassword123!"
     }
     response = test_db.post("/api/v1/auth/register", json=register_payload)
@@ -48,7 +48,7 @@ def test_register_and_workspace_creation(test_db):
     assert "access_token" in data
     assert "refresh_token" in data
     assert data["token_type"] == "bearer"
-    assert data["user"]["email"] == "admin@sentinel.ai"
+    assert data["user"]["email"] == "auth_admin_unique@sentinel.ai"
     assert data["user"]["name"] == "Sentinel Admin"
 
     # Verify JWT validity
@@ -56,7 +56,7 @@ def test_register_and_workspace_creation(test_db):
     user_info = test_db.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert user_info.status_code == 200
     me_json = user_info.json()
-    assert (me_json.get("email") or me_json.get("user", {}).get("email")) == "admin@sentinel.ai"
+    assert (me_json.get("email") or me_json.get("user", {}).get("email")) == "auth_admin_unique@sentinel.ai"
 
 
 def test_duplicate_user_handling(test_db):

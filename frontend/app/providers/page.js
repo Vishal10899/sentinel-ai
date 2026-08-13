@@ -27,7 +27,10 @@ import {
   Shuffle,
 } from "lucide-react";
 import { AppShell, PageTitle } from "../../components/shell";
+import { Badge, Button, ErrorCard, LoadingCard, Toast } from "../../components/ui";
+import { api } from "../../lib/api";
 import WithAdminAuth from "../../components/WithAdminAuth";
+
 
 function ProvidersPage() {
   const [providers, setProviders] = useState(null);
@@ -662,4 +665,4 @@ function ProvidersPage() {
   );
 }
 
-export default WithAdminAuth(ProvidersPage);
+export default WithAdminAuth(ProvidersPage, "provider.manage");

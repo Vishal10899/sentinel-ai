@@ -66,7 +66,7 @@ def test_scenario_a_bootstrap_admin_login(test_db):
 
 
 def test_scenario_b_new_normal_signup(test_db):
-    """SCENARIO B: New normal signup -> restricted default role -> no administrative privileges."""
+    """SCENARIO B: New normal signup -> becomes Organization Owner/Admin for their new org (not platform super admin)."""
     email = "user_b_normal@sentinel.ai"
     password = "UserPassword123!"
 
@@ -74,12 +74,9 @@ def test_scenario_b_new_normal_signup(test_db):
     assert reg.status_code in (200, 201), f"Signup failed: {reg.text}"
     data = reg.json()
 
-    assert data["role"]["id"] in ("role-viewer", "role-developer")
-    assert "*" not in data["permissions"]
-    assert "provider.manage" not in data["permissions"]
-    assert "rbac.manage" not in data["permissions"]
-    assert "users.manage" not in data["permissions"]
-
+    assert data["role"]["id"] == "role-org-admin"
+    assert "*" not in data["permissions"]  # Not platform Super Admin
+    assert data["is_owner"] is True
 
 
 def test_scenario_c_organization_employee_role(test_db):
@@ -107,12 +104,17 @@ def test_scenario_c_organization_employee_role(test_db):
     assert "users.manage" not in perm_data["effective_permissions"]
 
 
-
-
 def test_scenario_d_normal_user_admin_api_returns_403(test_db):
-    """SCENARIO D: Normal user manually calls admin API -> 403 Forbidden."""
-    # Register and login normal user
+    """SCENARIO D: Invited Developer manually calls admin API -> 403 Forbidden."""
+    # Invite a developer
+    inv = tenancy_repository.create_invitation(
+        org_id="org-default",
+        workspace_id="default",
+        email="user_d@sentinel.ai",
+        role_id="role-developer",
+    )
     reg = test_db.post("/api/v1/auth/register", json={"name": "Normal User D", "email": "user_d@sentinel.ai", "password": "UserPassword123!"})
+    assert reg.status_code in (200, 201)
     token = reg.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -150,3 +152,49 @@ def test_scenario_f_cross_tenant_access_denied(test_db):
     # Attempt to create workspace in unassigned org (requires workspace.manage permission)
     res = test_db.post("/api/v1/workspaces", json={"org_id": "other_org_99", "name": "Hack Workspace", "slug": "hack-ws"}, headers=headers)
     assert res.status_code == 403, f"Expected 403 for cross tenant access without permission, got {res.status_code}: {res.text}"
+
+
+def test_scenario_g_developer_allowed_endpoints(test_db):
+    """SCENARIO G: Developer accesses permitted dashboard APIs -> 200 OK."""
+    reg = test_db.post("/api/v1/auth/register", json={"name": "Developer G", "email": "dev_g@sentinel.ai", "password": "UserPassword123!"})
+    assert reg.status_code in (200, 201)
+    token = reg.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Health API
+    health_res = test_db.get("/api/v1/health")
+    assert health_res.status_code == 200
+
+    # Models API
+    models_res = test_db.get("/api/v1/models", headers=headers)
+    assert models_res.status_code == 200
+
+    # Analytics API
+    analytics_res = test_db.get("/api/v1/analytics", headers=headers)
+    assert analytics_res.status_code == 200
+
+    # Provider health API
+    provider_health_res = test_db.get("/api/v1/health/providers")
+    assert provider_health_res.status_code == 200
+
+
+def test_scenario_h_refresh_token_context(test_db):
+    """SCENARIO H: Refresh token produces valid token pair with complete context."""
+    reg = test_db.post("/api/v1/auth/register", json={"name": "User H", "email": "user_h@sentinel.ai", "password": "UserPassword123!"})
+    refresh_token = reg.json()["refresh_token"]
+
+    ref_res = test_db.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
+    assert ref_res.status_code == 200
+    ref_data = ref_res.json()
+    assert "access_token" in ref_data
+    assert "permissions" in ref_data
+    assert "role" in ref_data
+
+
+def test_scenario_i_logout_and_context_isolation(test_db):
+    """SCENARIO I: Logout endpoint invalidates/handles session state cleanly."""
+    reg = test_db.post("/api/v1/auth/register", json={"name": "User I", "email": "user_i@sentinel.ai", "password": "UserPassword123!"})
+    refresh_token = reg.json()["refresh_token"]
+
+    logout_res = test_db.post("/api/v1/auth/logout", json={"refresh_token": refresh_token})
+    assert logout_res.status_code in (200, 204)

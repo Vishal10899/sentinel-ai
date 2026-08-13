@@ -42,93 +42,38 @@ import {
 import { useState, useEffect } from "react";
 import { useAuth } from "../providers/AuthProvider";
 import { useTheme } from "../providers/ThemeProvider";
-import ProtectedRoute from "./ProtectedRoute";
-
+import { ROUTE_PERMISSIONS } from "./ProtectedRoute";
 import Sidebar from "./Sidebar";
 
-const groupedNavigation = [
-  {
-    group: "OVERVIEW",
-    items: [
-      ["Dashboard", "/dashboard", LayoutDashboard],
-      ["FinOps & Analytics", "/analytics", ChartNoAxesCombined],
-    ],
-  },
-  {
-    group: "GATEWAY & RUNTIME",
-    items: [
-      ["Developer Gateway & Playground", "/playground", BrainCircuit],
-      ["Provider Integrations", "/providers", Cable],
-      ["Model Catalog", "/models", Boxes],
-    ],
-  },
-  {
-    group: "ORCHESTRATION & RESILIENCE",
-    items: [
-      ["Adaptive Routing", "/routing-center", Cpu],
-      ["Circuit Breakers & Failover", "/circuit-breakers", HeartPulse],
-      ["MCP Governance", "/mcp-governance", ShieldCheck],
-      ["Semantic Cache", "/cache", Zap],
-    ],
-  },
-  {
-    group: "SECURITY & COMPLIANCE",
-    items: [
-      ["Inline DLP & PII Redaction", "/dlp", ShieldAlert],
-      ["AI Guardrails", "/guardrails", Lock],
-      ["Virtual API Keys", "/virtual-keys", Key],
-      ["Governance Policies", "/policies", Sliders],
-      ["Policy Simulator", "/policy-simulator", FlaskConical],
-    ],
-  },
-  {
-    group: "IDENTITY & AUDIT",
-    items: [
-      ["Organizations & Workspaces", "/organizations", Building2],
-      ["Roles & RBAC Matrix", "/roles", Users],
-      ["Audit Logs", "/audit", FileText],
-    ],
-  },
-  {
-    group: "OPERATIONS",
-    items: [
-      ["Agentic Tracing", "/agentic-tracing", Sparkles],
-      ["Observability", "/observability", Activity],
-      ["Platform Settings", "/settings", Settings],
-      ["Documentation", "/documentation", BookOpen],
-    ],
-  },
+
+const searchNavigationItems = [
+  ["Dashboard", "/dashboard", LayoutDashboard],
+  ["FinOps & Analytics", "/analytics", ChartNoAxesCombined],
+  ["Developer Gateway & Playground", "/playground", BrainCircuit],
+  ["Provider Integrations", "/providers", Cable],
+  ["Model Catalog", "/models", Boxes],
+  ["Adaptive Routing", "/routing-center", Cpu],
+  ["Circuit Breakers & Failover", "/circuit-breakers", HeartPulse],
+  ["MCP Governance", "/mcp-governance", ShieldCheck],
+  ["Semantic Cache", "/cache", Zap],
+  ["Inline DLP & PII Redaction", "/dlp", ShieldAlert],
+  ["AI Guardrails", "/guardrails", Lock],
+  ["Virtual API Keys", "/virtual-keys", Key],
+  ["Governance Policies", "/policies", Sliders],
+  ["Policy Simulator", "/policy-simulator", FlaskConical],
+  ["Organizations & Workspaces", "/organizations", Building2],
+  ["Roles & RBAC Matrix", "/roles", Users],
+  ["Audit Logs", "/audit", FileText],
+  ["Agentic Tracing", "/agentic-tracing", Sparkles],
+  ["Observability", "/observability", Activity],
+  ["Platform Settings", "/settings", Settings],
+  ["Documentation", "/documentation", BookOpen],
 ];
-
-
-const ROUTE_PERMISSIONS = {
-  "/dashboard": ["conversation.read", "chat.read", "analytics.read", "*"],
-  "/analytics": ["analytics.read", "view_analytics", "*"],
-  "/playground": ["chat.read", "chat.write", "*"],
-  "/providers": ["provider.manage", "manage_providers", "*"],
-  "/models": ["view_models", "model.manage", "*"],
-  "/routing-center": ["model.manage", "provider.manage", "*"],
-  "/circuit-breakers": ["provider.manage", "manage_providers", "*"],
-  "/mcp-governance": ["policy.manage", "guardrails.manage", "*"],
-  "/cache": ["cache.manage", "*"],
-  "/dlp": ["guardrails.manage", "policy.manage", "*"],
-  "/guardrails": ["guardrails.manage", "*"],
-  "/virtual-keys": ["apikey.manage", "create_api_keys", "*"],
-  "/policies": ["policy.manage", "manage_policies", "*"],
-  "/policy-simulator": ["policy.manage", "manage_policies", "*"],
-  "/organizations": ["workspace.manage", "manage_workspaces", "*"],
-  "/roles": ["users.manage", "rbac.manage", "*"],
-  "/audit": ["audit.read", "audit.export", "*"],
-  "/agentic-tracing": ["analytics.read", "audit.read", "*"],
-  "/observability": ["analytics.read", "*"],
-  "/settings": ["settings.manage", "manage_workspaces", "*"],
-  "/documentation": null,
-};
 
 export function AppShell({ title, subtitle, children }) {
   const path = usePathname();
   const router = useRouter();
-  const { user, role, permissions, logout, loading, authenticated } = useAuth();
+  const { user, role, permissions, logout, loading, authenticated, hasAnyPermission } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeWorkspace, setActiveWorkspace] = useState("Default Workspace");
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
@@ -146,19 +91,10 @@ export function AppShell({ title, subtitle, children }) {
   const userPermissions = permissions || [];
   const displayRole = role?.name || user?.role || "Member";
 
-  // Filter navigation groups based on effective user permissions
-  const visibleGroups = groupedNavigation
-    .map((group) => {
-      const visibleItems = group.items.filter(([, route]) => {
-        const reqPerms = ROUTE_PERMISSIONS[route];
-        if (!reqPerms) return true;
-        if (!userPermissions || !Array.isArray(userPermissions)) return false;
-        if (userPermissions.includes("*")) return true;
-        return reqPerms.some((p) => userPermissions.includes(p));
-      });
-      return { ...group, items: visibleItems };
-    })
-    .filter((group) => group.items.length > 0);
+  // Check if current user has authorization to view current route
+  const reqPerms = ROUTE_PERMISSIONS[path];
+  const isAllowedOnRoute = !reqPerms || hasAnyPermission(reqPerms);
+
 
   // Set active workspace from user object if available
   useEffect(() => {
@@ -222,7 +158,14 @@ export function AppShell({ title, subtitle, children }) {
   ];
 
   const searchResults = searchQuery.trim()
-    ? groupedNavigation.flatMap((g) => g.items).filter(([label]) => label.toLowerCase().includes(searchQuery.toLowerCase()))
+    ? searchNavigationItems.filter(([label, route]) => {
+        const req = ROUTE_PERMISSIONS[route];
+        if (req && !hasAnyPermission(req)) return false;
+        return (
+          label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          route.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+      })
     : [];
 
   const displayName = user?.name || user?.email?.split("@")[0] || "User";
@@ -320,8 +263,35 @@ export function AppShell({ title, subtitle, children }) {
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-[var(--bg-primary)]">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-[var(--bg-primary)]">
+          {!isAllowedOnRoute ? (
+            <div className="flex h-full min-h-[400px] w-full items-center justify-center">
+              <div className="max-w-md w-full rounded-2xl border border-rose-500/20 bg-rose-950/20 p-8 backdrop-blur-xl text-center">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/30">
+                  <ShieldAlert className="h-7 w-7" />
+                </div>
+                <h2 className="mb-2 text-xl font-bold tracking-tight text-white">403 - Access Denied</h2>
+                <p className="mb-4 text-xs leading-relaxed text-slate-400">
+                  Your assigned role (<span className="text-indigo-300 font-semibold">{displayRole}</span>) does not have permission to access <code className="font-mono text-indigo-300">{path}</code>.
+                </p>
+                <div className="mb-6 rounded-lg bg-black/40 border border-white/10 p-3 text-left">
+                  <span className="text-[10px] uppercase tracking-wider text-slate-400 block mb-1 font-bold">Required Permissions:</span>
+                  <span className="font-mono text-xs text-rose-300">{reqPerms ? reqPerms.filter((p) => p !== "*").join(", ") : "Administrative Access"}</span>
+                </div>
+                <button
+                  onClick={() => router.push("/dashboard")}
+                  className="w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/30"
+                >
+                  Return to Dashboard
+                </button>
+              </div>
+            </div>
+          ) : (
+            children
+          )}
+        </main>
       </div>
+
 
       {/* ⌘K Command Search Palette Modal */}
       {isSearchOpen && (

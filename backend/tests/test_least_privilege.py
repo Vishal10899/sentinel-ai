@@ -54,10 +54,11 @@ def _setup_user(client, email, role_id=None, name="Test User"):
     return data, {"Authorization": f"Bearer {data['access_token']}"}
 
 
-def test_new_signup_is_viewer(test_db):
-    """1. New signup -> Viewer or Developer (non-admin)"""
+def test_new_signup_is_org_admin(test_db):
+    """1. New customer signup -> Organization Admin for new org (not platform super-admin)"""
     data, _ = _setup_user(test_db, "new_signup@sentinel.ai")
-    assert data["role"]["id"] in ("role-viewer", "role-developer")
+    assert data["role"]["id"] == "role-org-admin"
+    assert "*" not in data["permissions"]
 
 
 def test_viewer_cannot_create_api_key(test_db):
@@ -96,9 +97,9 @@ def test_developer_can_chat(test_db):
 
 
 def test_developer_can_view_models(test_db):
-    """7. Developer -> can view models"""
+    """7. Developer -> can view models catalog"""
     _, headers = _setup_user(test_db, "dev4@sentinel.ai", role_id="role-developer")
-    res = test_db.get("/api/v1/providers", headers=headers)
+    res = test_db.get("/api/v1/models", headers=headers)
     assert res.status_code == 200
 
 

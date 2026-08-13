@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { FileText, Download, Search, Filter, ShieldAlert, CheckCircle2, Clock, RefreshCw } from "lucide-react";
 import { AppShell, PageTitle } from "../../components/shell";
 import { Badge, Button, ErrorCard, LoadingCard, Toast } from "../../components/ui";
-import { api } from "../../lib/api";
+import { api, getApiBaseUrl } from "../../lib/api";
 
 export default function AuditPage() {
   const [logs, setLogs] = useState([]);
@@ -47,7 +47,7 @@ export default function AuditPage() {
   };
 
   const handleExport = (format) => {
-    window.open(`${api.API_BASE_URL || "http://localhost:8000/api/v1"}/audit/export?format=${format}`, "_blank");
+    window.open(`${getApiBaseUrl()}/audit/export?format=${format}`, "_blank");
   };
 
   return (

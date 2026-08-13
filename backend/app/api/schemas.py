@@ -206,23 +206,38 @@ class UserResponse(BaseModel):
     name: str
     email: str
     role: str | None = None
+    is_owner: bool | None = False
 
 
 class OrganizationResponse(BaseModel):
     id: str
     name: str
     slug: str
+    domain: str | None = None
+    owner_id: str | None = None
+    is_owner: bool | None = False
 
 
 class WorkspaceResponse(BaseModel):
     id: str
     name: str
     slug: str
+    owner_id: str | None = None
+
+
+class MembershipResponse(BaseModel):
+    id: str
+    org_id: str
+    workspace_id: str
+    user_id: str
+    role_id: str
+    status: str = "ACTIVE"
 
 
 class RoleInfoResponse(BaseModel):
     id: str
     name: str
+    description: str | None = None
     is_builtin: bool = True
 
 
@@ -233,8 +248,10 @@ class TokenResponse(BaseModel):
     user: UserResponse
     organization: OrganizationResponse | None = None
     workspace: WorkspaceResponse | None = None
+    membership: MembershipResponse | None = None
     role: RoleInfoResponse | None = None
     permissions: list[str] = Field(default_factory=list)
+    is_owner: bool | None = False
 
 
 

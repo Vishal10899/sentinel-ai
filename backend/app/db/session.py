@@ -24,10 +24,14 @@ if database_available:
         engine_kwargs["pool_size"] = settings.database_pool_size
         engine_kwargs["max_overflow"] = settings.database_max_overflow
 
-    engine = create_async_engine(
-        settings.database_url,
-        **engine_kwargs,
-    )
+    try:
+        engine = create_async_engine(
+            settings.database_url,
+            **engine_kwargs,
+        )
+    except Exception:
+        engine = None
+        database_available = False
 
 # Request handlers receive isolated sessions and retain control of transactions.
 AsyncSessionFactory = (

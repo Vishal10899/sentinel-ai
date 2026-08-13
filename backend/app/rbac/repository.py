@@ -36,7 +36,7 @@ class RoleRepository:
                     "conversation.read", "conversation.delete", "provider.manage", "model.manage",
                     "policy.manage", "cache.manage", "guardrails.manage", "apikey.manage",
                     "workspace.manage", "analytics.read", "audit.read", "audit.export",
-                    "billing.manage", "settings.manage", "users.manage",
+                    "billing.manage", "settings.manage", "users.manage", "roles.manage",
                 ],
                 inherits_from=["role-workspace-admin"],
                 is_builtin=True,
@@ -188,6 +188,10 @@ class RoleRepository:
             return False
         self._user_roles[user_id] = role.id
         return True
+
+    def has_user_role(self, user_id: str) -> bool:
+        """Check if user has an explicitly assigned role in repository."""
+        return user_id in self._user_roles
 
     def get_user_role(self, user_id: str) -> Role:
         """Get role assigned to a user (defaults to role-super-admin for system admin, role-viewer for others)."""

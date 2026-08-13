@@ -10,6 +10,7 @@ from app.db.base import Base
 from app.db.session import get_db
 from app.models.user import UserRole
 from app.core.settings import settings
+from app.tenancy.repository import tenancy_repository
 
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -94,7 +95,14 @@ def test_developer_role_blocked_on_team_invite_and_providers(test_db):
     }
     test_db.post("/api/v1/auth/register", json=admin_payload)
 
-    # 2. Subsequent registration receives DEVELOPER role
+    # 2. Issue team invitation for Developer Bob to join as DEVELOPER
+    tenancy_repository.create_invitation(
+        org_id="org-default",
+        workspace_id="default",
+        email="bob.developer@company.com",
+        role_id="role-developer",
+    )
+
     dev_payload = {
         "name": "Developer Bob",
         "email": "bob.developer@company.com",

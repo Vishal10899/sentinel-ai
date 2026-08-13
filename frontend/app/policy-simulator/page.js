@@ -320,8 +320,8 @@ export default function PolicySimulatorPage() {
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {recommendations.map((rec) => (
-                  <div key={rec.id} className="rounded-xl border border-white/10 bg-black/40 p-4 space-y-3 flex flex-col justify-between">
+                {recommendations.map((rec, idx) => (
+                  <div key={rec.id || rec.recommendation_id || `rec-${idx}`} className="rounded-xl border border-white/10 bg-black/40 p-4 space-y-3 flex flex-col justify-between">
                     <div className="space-y-2">
                       <div className="flex justify-between items-start gap-2">
                         <Badge variant={rec.priority === "HIGH" ? "amber" : "cyan"}>{rec.type}</Badge>
@@ -331,7 +331,7 @@ export default function PolicySimulatorPage() {
                       <p className="text-[10px] text-slate-400">{rec.impact}</p>
                     </div>
 
-                    <Button size="xs" variant="zinc" onClick={() => handleApplyRec(rec.id)}>
+                    <Button size="xs" variant="zinc" onClick={() => handleApplyRec(rec.id || rec.recommendation_id)}>
                       Apply Recommendation
                     </Button>
                   </div>
@@ -346,9 +346,9 @@ export default function PolicySimulatorPage() {
               </h3>
 
               <div className="space-y-3">
-                {versions.map((ver) => (
+                {versions.map((ver, idx) => (
                   <div
-                    key={ver.id}
+                    key={ver.version_id || ver.id || `ver-${ver.version_number || idx}`}
                     className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                       ver.is_active
                         ? "border-emerald-500/40 bg-emerald-500/10"
@@ -367,7 +367,7 @@ export default function PolicySimulatorPage() {
                     </div>
 
                     {!ver.is_active && (
-                      <Button size="xs" variant="zinc" onClick={() => handleRollback(ver.id)}>
+                      <Button size="xs" variant="zinc" onClick={() => handleRollback(ver.version_id || ver.id)}>
                         <RotateCcw className="h-3.5 w-3.5" /> Rollback to V{ver.version_number}
                       </Button>
                     )}

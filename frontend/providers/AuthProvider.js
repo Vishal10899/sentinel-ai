@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   clearSession,
@@ -8,7 +8,7 @@ import {
   hasSession,
   saveSession,
 } from "../utils/storage";
-import { api } from "../lib/api";
+import { api, clearApiCache } from "../lib/api";
 
 const AuthContext = createContext(null);
 
@@ -50,6 +50,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const expire = () => {
       clearSession();
+      clearApiCache();
       setUser(null);
       setAuthContext(null);
       router.replace("/login?reason=expired");
@@ -58,24 +59,58 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener("sentinel:session-expired", expire);
   }, [router]);
 
-  const login = (session) => {
+  const login = async (session) => {
+    clearApiCache();
     saveSession(session);
-    if (session.user) {
+    if (session?.access_token) {
+      try {
+        const data = await api.me();
+        if (data && data.user) {
+          setUser(data.user);
+          setAuthContext(data);
+          return;
+        }
+      } catch (e) {
+        console.warn("Could not fetch immediate /auth/me on login:", e);
+      }
+    }
+    if (session?.user) {
       setUser(session.user);
     }
-    if (session.permissions) {
+    if (session?.permissions) {
       setAuthContext(session);
     } else {
-      refreshContext();
+      await refreshContext();
     }
   };
 
   const logout = () => {
     clearSession();
+    clearApiCache();
     setUser(null);
     setAuthContext(null);
     router.replace("/login");
   };
+
+  const permissions = useMemo(() => authContext?.permissions || [], [authContext]);
+
+  const hasPermission = useCallback(
+    (perm) => {
+      if (!perm) return true;
+      if (permissions.includes("*")) return true;
+      return permissions.includes(perm);
+    },
+    [permissions]
+  );
+
+  const hasAnyPermission = useCallback(
+    (permsList) => {
+      if (!permsList || permsList.length === 0) return true;
+      if (permissions.includes("*")) return true;
+      return permsList.some((p) => p === "*" || permissions.includes(p));
+    },
+    [permissions]
+  );
 
   const value = useMemo(
     () => ({
@@ -83,14 +118,16 @@ export function AuthProvider({ children }) {
       organization: authContext?.organization || null,
       workspace: authContext?.workspace || null,
       role: authContext?.role || null,
-      permissions: authContext?.permissions || [],
+      permissions,
       loading,
       authenticated: !!(authContext?.user || user),
       login,
       logout,
       refreshContext,
+      hasPermission,
+      hasAnyPermission,
     }),
-    [user, authContext, loading]
+    [user, authContext, permissions, loading, hasPermission, hasAnyPermission]
   );
 
   return (

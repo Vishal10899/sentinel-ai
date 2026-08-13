@@ -8,7 +8,7 @@ import ChatLayout from "../../components/chat/ChatLayout";
 import ChatWindow from "../../components/chat/ChatWindow";
 import ConversationSidebar from "../../components/chat/ConversationSidebar";
 import PromptLibraryModal from "../../components/chat/PromptLibraryModal";
-import { api, API_BASE_URL } from "../../lib/api";
+import { api, API_BASE_URL, getApiBaseUrl } from "../../lib/api";
 
 const ACTIVE_CONVERSATION_KEY = "sentinel:active-conversation";
 
@@ -290,7 +290,7 @@ export default function Playground() {
       let headers = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const streamUrl = `${API_BASE_URL || "http://localhost:8000/api/v1"}/chat/stream`;
+      const streamUrl = `${getApiBaseUrl()}/chat/stream`;
       const requestPayload = {
         conversation_id: targetConvId,
         provider: useAutoRouting ? undefined : provider,

@@ -53,6 +53,92 @@ async def _init_db_tables() -> None:
         logger.warning("Metadata table sync warning: %s", err)
 
 
+async def _bootstrap_super_admins() -> None:
+    """Safely bootstrap and reconcile configured platform Super Admin accounts."""
+    try:
+        from app.db.session import AsyncSessionFactory, get_db_session
+        from app.models.user import User
+        from app.auth.service import _hash
+        from app.rbac import role_repository
+        from app.tenancy.repository import tenancy_repository
+        from sqlalchemy import select
+        import secrets
+
+        admins_to_bootstrap = [
+            {
+                "email": settings.bootstrap_super_admin_email_1,
+                "password": settings.bootstrap_super_admin_password_1,
+                "name": settings.bootstrap_super_admin_name_1,
+            },
+            {
+                "email": settings.bootstrap_super_admin_email_2,
+                "password": settings.bootstrap_super_admin_password_2,
+                "name": settings.bootstrap_super_admin_name_2,
+            },
+            {
+                "email": settings.bootstrap_admin_email,
+                "password": settings.bootstrap_admin_password,
+                "name": "System Admin",
+            },
+        ]
+
+        if AsyncSessionFactory is not None:
+            async with get_db_session() as session:
+                for admin_spec in admins_to_bootstrap:
+                    raw_email = admin_spec.get("email")
+                    if not raw_email:
+                        continue
+                    email = raw_email.strip().lower()
+                    name = admin_spec.get("name") or "Super Admin"
+                    password = admin_spec.get("password")
+
+                    # Check if user exists
+                    stmt = select(User).where(User.email == email)
+                    result = await session.execute(stmt)
+                    user = result.scalar_one_or_none()
+
+                    if user is None and password:
+                        # Create new user
+                        salt, pwd_hash = _hash(password)
+                        user_id = secrets.token_hex(16)
+                        user = User(
+                            id=user_id,
+                            name=name,
+                            email=email,
+                            salt=salt,
+                            password_hash=pwd_hash,
+                        )
+                        session.add(user)
+                        await session.commit()
+                        logger.info("Created bootstrap Super Admin account for %s", email)
+                    elif user is not None and password:
+                        salt, pwd_hash = _hash(password)
+                        user.salt = salt
+                        user.password_hash = pwd_hash
+                        if name:
+                            user.name = name
+                        session.add(user)
+                        await session.commit()
+                        logger.info("Reconciled bootstrap Super Admin credentials for %s", email)
+
+                    if user:
+                        # Reconcile Super Admin role & membership
+                        role_repository.assign_user_role(user.id, "role-super-admin")
+                        user_mem = tenancy_repository.get_user_membership(user.id, org_id="org-default")
+                        if not user_mem:
+                            tenancy_repository.create_membership(
+                                org_id="org-default",
+                                workspace_id="default",
+                                user_id=user.id,
+                                role_id="role-super-admin",
+                                status="ACTIVE",
+                            )
+                        else:
+                            user_mem.role_id = "role-super-admin"
+    except Exception as err:
+        logger.warning("Super Admin bootstrap warning: %s", err)
+
+
 def _seed_demo_data() -> None:
     try:
         from scripts.seed_demo_data import main as seed_main
@@ -67,6 +153,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     logger.info("Starting %s version %s", settings.project_title, settings.project_version)
     await asyncio.to_thread(_run_alembic_migrations)
     await _init_db_tables()
+    await _bootstrap_super_admins()
     provider_manager.clear()
     register_configured_providers(provider_manager, settings)
     logger.info("Registered provider framework adapters")
