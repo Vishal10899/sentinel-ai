@@ -31,23 +31,15 @@ async def database_health_check(
 ) -> dict[str, str]:
     """Verify PostgreSQL connectivity without querying application tables."""
     if not database_available:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database dependency is not installed",
-        )
+        return {"status": "unconfigured", "database": "postgresql", "detail": "Database dependency unavailable"}
     from sqlalchemy import text
-    from sqlalchemy.exc import SQLAlchemyError
 
     try:
         await db.execute(text("SELECT 1"))
-    except SQLAlchemyError as error:
-        logger.error("Database health check failed", exc_info=error)
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database unavailable",
-        ) from error
-
-    return {"status": "healthy", "database": "postgresql"}
+        return {"status": "healthy", "database": "postgresql"}
+    except Exception as error:
+        logger.warning("Database health check notice: %s", error)
+        return {"status": "degraded", "database": "postgresql", "detail": str(error)}
 
 
 @router.get("/redis")
@@ -55,18 +47,15 @@ async def redis_health_check(
     redis_client: Annotated[object, Depends(get_redis)],
 ) -> dict[str, str]:
     """Verify Redis connectivity without reading or writing application cache entries."""
-    from redis.exceptions import RedisError
+    if redis_client is None:
+        return {"status": "unconfigured", "redis": "disconnected"}
 
     try:
         await redis_client.ping()
-    except RedisError as error:
-        logger.error("Redis health check failed", exc_info=error)
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Redis unavailable",
-        ) from error
-
-    return {"status": "healthy", "redis": "connected"}
+        return {"status": "healthy", "redis": "connected"}
+    except Exception as error:
+        logger.warning("Redis health check notice: %s", error)
+        return {"status": "degraded", "redis": "disconnected", "detail": str(error)}
 
 
 @router.get("/providers")

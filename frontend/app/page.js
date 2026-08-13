@@ -1,9 +1,64 @@
 "use client";
 
-import Link from "next/link";
-import { motion } from "framer-motion";
-import { ArrowRight, BarChart3, Bot, Check, CircleDollarSign, Code2, Cpu, ShieldCheck, Sparkles, Zap } from "lucide-react";
-import { Button } from "../components/ui";
+import Navbar from "../components/landing/Navbar";
+import HeroSection from "../components/landing/HeroSection";
+import WhatIsSentinel from "../components/landing/WhatIsSentinel";
+import WhyCompaniesNeedSentinel from "../components/landing/WhyCompaniesNeedSentinel";
+import CoreCapabilities from "../components/landing/CoreCapabilities";
+import RequestJourney from "../components/landing/RequestJourney";
+import IntegrationsSection from "../components/landing/IntegrationsSection";
+import EnterpriseResults from "../components/landing/EnterpriseResults";
+import TestimonialsSection from "../components/landing/TestimonialsSection";
+import PricingSection from "../components/landing/PricingSection";
+import FaqSection from "../components/landing/FaqSection";
+import FinalCtaSection from "../components/landing/FinalCtaSection";
+import FooterSection from "../components/landing/FooterSection";
 
-const features = [[Zap,"Intelligent routing","Pick the right model for every workload."],[CircleDollarSign,"Cost intelligence","Estimate and compare spend before every call."],[ShieldCheck,"Visible infrastructure","See provider readiness and system health in one place."]];
-export default function Home() { return <main className="overflow-hidden bg-[#080b12] text-slate-100"><nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5"><Link href="/" className="flex items-center gap-3 font-semibold"><span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-400 to-violet-600"><ShieldCheck className="h-5 w-5" /></span>Sentinel AI</Link><div className="hidden gap-6 text-sm text-slate-400 md:flex"><a href="#platform">Platform</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></div><Link href="/login"><Button variant="secondary">Sign in</Button></Link></nav><section className="relative mx-auto max-w-7xl px-6 pb-24 pt-20 text-center sm:pt-28"><div className="absolute inset-x-0 top-0 -z-0 h-96 bg-[radial-gradient(circle,_rgba(99,102,241,.24),transparent_64%)]" /><motion.div initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} className="relative"><span className="inline-flex items-center gap-2 rounded-full border border-indigo-400/20 bg-indigo-400/10 px-3 py-1.5 text-xs text-indigo-200"><Sparkles className="h-3.5 w-3.5" />The intelligent AI control plane</span><h1 className="mx-auto mt-7 max-w-4xl text-5xl font-semibold leading-[1.05] tracking-tight sm:text-7xl">Every AI call, <span className="gradient-text">made smarter.</span></h1><p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-400">Route workloads to the optimal model, understand costs in real time, and keep every provider visible.</p><div className="mt-9 flex justify-center gap-3"><Link href="/dashboard"><Button>Open console <ArrowRight className="h-4 w-4" /></Button></Link><Link href="/playground"><Button variant="secondary">Try the playground</Button></Link></div></motion.div><div className="surface relative mx-auto mt-16 max-w-5xl p-3 text-left"><div className="rounded-xl border border-white/[.06] bg-[#0b101b] p-5"><div className="flex items-center justify-between border-b border-white/[.06] pb-4"><span className="text-sm font-medium">Routing decision</span><span className="text-xs text-emerald-300">● Optimized</span></div><div className="grid gap-4 pt-5 sm:grid-cols-3">{[["Provider","OpenAI"],["Selected model","GPT-4o mini"],["Estimated cost","$0.00045"]].map(([a,b])=><div key={a} className="rounded-xl bg-white/[.04] p-4"><p className="text-xs text-slate-500">{a}</p><p className="mt-2 font-medium">{b}</p></div>)}</div></div></div></section><section id="platform" className="border-y border-white/[.06] bg-white/[.02] py-20"><div className="mx-auto max-w-7xl px-6"><p className="eyebrow text-center">One intelligent layer</p><h2 className="mx-auto mt-3 max-w-2xl text-center text-3xl font-semibold">Move faster without losing control.</h2><div className="mt-12 grid gap-5 md:grid-cols-3">{features.map(([Icon,title,copy])=><div className="surface p-6" key={title}><Icon className="h-5 w-5 text-indigo-300" /><h3 className="mt-5 font-semibold">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-400">{copy}</p></div>)}</div></div></section><section className="mx-auto grid max-w-7xl gap-12 px-6 py-24 md:grid-cols-2 md:items-center"><div><p className="eyebrow">AI cost savings</p><h2 className="mt-3 text-4xl font-semibold tracking-tight">The clearest path to a leaner AI stack.</h2><p className="mt-5 text-slate-400">Compare every enabled model against the same workload and make price-performance decisions with confidence.</p><ul className="mt-7 space-y-3 text-sm text-slate-300">{["Input and output token pricing","Deterministic lowest-cost routing","Provider and model transparency"].map(x=><li className="flex gap-2" key={x}><Check className="h-4 w-4 text-emerald-300" />{x}</li>)}</ul></div><div className="surface p-7"><BarChart3 className="h-8 w-8 text-cyan-300" /><p className="mt-8 text-sm text-slate-500">Potential cost reduction</p><p className="mt-1 text-6xl font-semibold">70<span className="text-indigo-300">%</span></p><p className="mt-4 text-sm text-slate-400">when a workload can use an efficient model.</p></div></section><section className="bg-white/[.025] py-20"><div className="mx-auto max-w-7xl px-6"><p className="eyebrow">Supported providers</p><div className="mt-7 grid grid-cols-2 gap-4 sm:grid-cols-4">{[[Bot,"OpenAI"],[Cpu,"Google Gemini"],[Code2,"Anthropic"],[Zap,"Ollama"]].map(([Icon,name])=><div key={name} className="surface flex items-center gap-3 p-5"><Icon className="h-5 w-5 text-slate-300" /><span className="font-medium">{name}</span></div>)}</div></div></section><section id="pricing" className="mx-auto max-w-5xl px-6 py-24 text-center"><p className="eyebrow">Simple pricing</p><h2 className="mt-3 text-4xl font-semibold">Start with visibility. Scale with confidence.</h2><div className="surface mx-auto mt-10 max-w-sm p-7 text-left"><p className="font-medium">Developer</p><p className="mt-4 text-4xl font-semibold">Free</p><p className="mt-2 text-sm text-slate-400">Everything needed to explore model routing.</p><Link className="mt-6 block" href="/register"><Button className="w-full">Create workspace</Button></Link></div></section><section id="faq" className="border-t border-white/[.06] px-6 py-16"><div className="mx-auto max-w-3xl"><p className="eyebrow">FAQ</p><div className="mt-6 space-y-5">{[["What does Sentinel route?","Supported chat, summarization, translation, classification, and code-generation workloads."],["Does Sentinel call models?","The current control plane selects models and estimates costs from registered metadata."],["Can I use local models?","Yes. Ollama models are included as available catalog options."]].map(([q,a])=><div key={q} className="surface p-5"><p className="font-medium">{q}</p><p className="mt-2 text-sm text-slate-400">{a}</p></div>)}</div></div></section><footer className="border-t border-white/[.06] px-6 py-8 text-center text-sm text-slate-500">© 2026 Sentinel AI. Intelligent infrastructure for every model call.</footer></main>; }
+export default function LandingPage() {
+  return (
+    <main className="min-h-screen bg-[#07111F] text-slate-100 font-sans selection:bg-blue-600 selection:text-white">
+      {/* Fixed Header */}
+      <Navbar />
+
+      {/* 1. HERO SECTION: Dark Luxury Theme (#07111F / #0D1324) */}
+      <HeroSection />
+
+      {/* DUAL MOOD TRANSITION TO WARM LIGHT THEME (#FAFAF8 / #F8F7F2) */}
+      <div className="bg-[#FAFAF8]">
+        {/* 2. WHAT IS SENTINEL */}
+        <WhatIsSentinel />
+
+        {/* 3. WHY COMPANIES NEED SENTINEL (Problem vs. Solution) */}
+        <WhyCompaniesNeedSentinel />
+
+        {/* 4. CORE CAPABILITIES (5 Key Pillars with Custom Visual Illustrations) */}
+        <CoreCapabilities />
+
+        {/* 5. HOW ONE AI REQUEST TRAVELS (Interactive Request Journey) */}
+        <RequestJourney />
+
+        {/* 6. ENTERPRISE INTEGRATIONS */}
+        <IntegrationsSection />
+
+        {/* 7. ENTERPRISE RESULTS & METRICS */}
+        <EnterpriseResults />
+
+        {/* 8. TESTIMONIALS */}
+        <TestimonialsSection />
+
+        {/* 9. PRICING PREVIEW */}
+        <PricingSection />
+
+        {/* 10. FREQUENTLY ASKED QUESTIONS */}
+        <FaqSection />
+      </div>
+
+      {/* DUAL MOOD TRANSITION BACK TO DARK LUXURY THEME FOR FINAL CTA & FOOTER */}
+      {/* 11. FINAL CTA SECTION */}
+      <FinalCtaSection />
+
+      {/* 12. ENTERPRISE FOOTER */}
+      <FooterSection />
+    </main>
+  );
+}

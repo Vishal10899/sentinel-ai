@@ -2,19 +2,160 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root, html.dark, .dark {
+    --bg-primary: #07111F;
+    --bg-surface: #0D1829;
+    --bg-surface-alt: #132238;
+    --bg-elevated: #1A2B44;
+    --sidebar-bg: #091322;
+    --header-bg: rgba(9, 19, 34, 0.85);
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-hover: rgba(255, 255, 255, 0.2);
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
+    
+    --hero-bg: #07111F;
+    --hero-card-bg: #0D1829;
+    --hero-border: rgba(255, 255, 255, 0.08);
+    --hero-text: #F8FAFC;
+    --hero-text-muted: #94A3B8;
+  }
+
+  html.light, .light {
+    --bg-primary: #FAFAF8;
+    --bg-surface: #FFFFFF;
+    --bg-surface-alt: #F4F4F0;
+    --bg-elevated: #EBF0F5;
+    --sidebar-bg: #F1F5F9;
+    --header-bg: rgba(255, 255, 255, 0.9);
+    --border-color: #E2E8F0;
+    --border-hover: #CBD5E1;
+    --text-primary: #0F172A;
+    --text-secondary: #334155;
+    --text-muted: #64748B;
+    
+    --hero-bg: #F8FAFC;
+    --hero-card-bg: #FFFFFF;
+    --hero-border: #E2E8F0;
+    --hero-text: #0F172A;
+    --hero-text-muted: #475569;
+  }
+}
+
 body {
   margin: 0;
   min-height: 100vh;
-  background: #080b12;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-* { box-sizing: border-box; }
-
-::selection { background: rgba(99, 102, 241, .5); }
-
-@layer components {
-  .surface { @apply rounded-2xl border border-white/[0.08] bg-white/[0.035] shadow-2xl shadow-black/10 backdrop-blur-xl; }
-  .eyebrow { @apply text-xs font-semibold uppercase tracking-[0.18em] text-indigo-300; }
-  .muted { @apply text-sm text-slate-400; }
-  .gradient-text { @apply bg-gradient-to-r from-indigo-300 via-violet-200 to-cyan-200 bg-clip-text text-transparent; }
+.surface {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
+
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: rgba(37, 99, 235, 0.3);
+  color: #FFFFFF;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+/* Visual Background Patterns */
+.dark-hero-grid {
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.15) 0%, transparent 60%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 48px 48px, 48px 48px;
+}
+
+.light-body-pattern {
+  background-image: 
+    radial-gradient(circle at 50% 100%, rgba(37, 99, 235, 0.03) 0%, transparent 50%),
+    linear-gradient(to right, rgba(0, 0, 0, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.025) 1px, transparent 1px);
+  background-size: 100% 100%, 64px 64px, 64px 64px;
+}
+
+/* Subtle glow effects */
+.glow-blue {
+  box-shadow: 0 0 40px -10px rgba(37, 99, 235, 0.35);
+}
+
+.glow-cyan {
+  box-shadow: 0 0 40px -10px rgba(6, 182, 212, 0.35);
+}
+
+.glow-amber {
+  box-shadow: 0 0 30px -8px rgba(245, 158, 11, 0.3);
+}
+
+/* Animations */
+@keyframes flow-dash {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+.animate-flow-dash {
+  stroke-dasharray: 8 8;
+  animation: flow-dash 1.5s linear infinite;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 4s ease-in-out infinite;
+}
+
+/* Custom card shadow for light mode */
+.light-card-shadow {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 10px 30px -5px rgba(0, 0, 0, 0.05);
+}
+
+.light-card-hover {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.light-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06), 0 20px 40px -8px rgba(0, 0, 0, 0.08);
+}
+
+

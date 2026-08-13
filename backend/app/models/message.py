@@ -42,6 +42,26 @@ class Message(Base):
         nullable=True,
     )
 
+    system_prompt: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    attachments: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    strategy_used: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+    )
+
+    routing_explanation_json: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
     prompt_tokens: Mapped[int] = mapped_column(
         Integer,
         default=0,

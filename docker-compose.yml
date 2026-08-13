@@ -6,9 +6,14 @@ services:
       - ./backend/.env
     ports:
       - "8000:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./backend:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      - ./scripts:/app/scripts
+    environment:
+      - WATCHFILES_IGNORE_PATHS=.venv,scratch,uploads,.git,.pytest_cache
+    command: sh -c "python /app/scripts/seed_demo_data.py || true; uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"
     depends_on:
       postgres:
         condition: service_healthy
@@ -24,6 +29,9 @@ services:
       context: ./frontend
     ports:
       - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -31,6 +39,7 @@ services:
     command: npm run dev
     depends_on:
       - backend
+
 
   postgres:
     image: postgres:16-alpine
@@ -68,12 +77,40 @@ services:
     container_name: sentinel-ai-ollama
     ports:
       - "11434:11434"
+    environment:
+      - OLLAMA_NUM_PARALLEL=1
+      - OLLAMA_MAX_LOADED_MODELS=1
+      - OLLAMA_KEEP_ALIVE=24h
     volumes:
       - ollama_data:/root/.ollama
     restart: unless-stopped
+
+  sentinel-data-plane:
+    build:
+      context: ./infrastructure/data-plane
+    ports:
+      - "8080:8080"
+    environment:
+      - CONTROL_PLANE_URL=http://backend:8000
+      - REDIS_URL=redis://redis:6379
+      - QDRANT_URL=http://qdrant:6333
+      - RUST_LOG=info
+    depends_on:
+      - backend
+      - redis
+      - qdrant
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
 
 volumes:
   postgres_data:
   redis_data:
   qdrant_data:
   ollama_data:
+  clickhouse_data:

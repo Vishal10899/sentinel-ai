@@ -8,25 +8,50 @@ import {
   hasSession,
   saveSession,
 } from "../utils/storage";
+import { api } from "../lib/api";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const [authContext, setAuthContext] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (hasSession()) {
-      setUser(getUser());
+  const refreshContext = async () => {
+    if (!hasSession()) {
+      setUser(null);
+      setAuthContext(null);
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+    try {
+      const data = await api.me();
+      if (data && data.user) {
+        setUser(data.user);
+        setAuthContext(data);
+      } else {
+        const cachedUser = getUser();
+        setUser(cachedUser);
+      }
+    } catch (e) {
+      console.warn("Failed to fetch authorization context from server:", e);
+      const cachedUser = getUser();
+      setUser(cachedUser);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshContext();
   }, []);
 
   useEffect(() => {
     const expire = () => {
       clearSession();
       setUser(null);
+      setAuthContext(null);
       router.replace("/login?reason=expired");
     };
     window.addEventListener("sentinel:session-expired", expire);
@@ -35,23 +60,37 @@ export function AuthProvider({ children }) {
 
   const login = (session) => {
     saveSession(session);
-    setUser(session.user);
+    if (session.user) {
+      setUser(session.user);
+    }
+    if (session.permissions) {
+      setAuthContext(session);
+    } else {
+      refreshContext();
+    }
   };
 
   const logout = () => {
     clearSession();
     setUser(null);
+    setAuthContext(null);
+    router.replace("/login");
   };
 
   const value = useMemo(
     () => ({
-      user,
+      user: authContext?.user || user,
+      organization: authContext?.organization || null,
+      workspace: authContext?.workspace || null,
+      role: authContext?.role || null,
+      permissions: authContext?.permissions || [],
       loading,
-      authenticated: !!user,
+      authenticated: !!(authContext?.user || user),
       login,
       logout,
+      refreshContext,
     }),
-    [user, loading]
+    [user, authContext, loading]
   );
 
   return (

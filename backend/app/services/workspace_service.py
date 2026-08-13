@@ -31,7 +31,6 @@ class WorkspaceService:
         db.add(workspace)
 
         await db.commit()
-        await db.refresh(workspace)
 
         return workspace
 

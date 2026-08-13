@@ -1,16 +1,42 @@
-"""Public, side-effect-free cost optimization foundation."""
+"""Enterprise Cost Intelligence Engine Package."""
 
 from app.cost.calculator import CostCalculator
-from app.cost.comparator import CostComparator
+from app.cost.comparator import CostComparisonReport, CostComparator, ModelCostComparisonItem, cost_comparator
+from app.cost.history_architecture import (
+    CostRecordDTO,
+    CostRecordedEvent,
+    ICostRepository,
+    MonthlyProjection,
+)
+from app.cost.optimization_engine import (
+    CostOptimizationEngine,
+    CostOptimizationReport,
+    OptimizationRecommendation,
+    cost_optimization_engine,
+)
+from app.cost.pricing_engine import DetailedCostEstimate, ModelPricingSpec, PricingEngine, pricing_engine
+
 from app.cost.estimator import CostEstimator
-from app.cost.models import CostComparison, CostEstimate
-from app.cost.report import SavingsReport
+CostEstimate = DetailedCostEstimate
 
 __all__ = [
     "CostCalculator",
+    "CostComparisonReport",
     "CostComparator",
-    "CostComparison",
     "CostEstimate",
     "CostEstimator",
-    "SavingsReport",
+    "CostOptimizationEngine",
+    "CostOptimizationReport",
+    "CostRecordDTO",
+    "CostRecordedEvent",
+    "DetailedCostEstimate",
+    "ICostRepository",
+    "ModelCostComparisonItem",
+    "ModelPricingSpec",
+    "MonthlyProjection",
+    "OptimizationRecommendation",
+    "PricingEngine",
+    "cost_comparator",
+    "cost_optimization_engine",
+    "pricing_engine",
 ]

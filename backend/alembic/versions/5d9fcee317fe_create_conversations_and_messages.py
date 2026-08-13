@@ -27,12 +27,22 @@ def upgrade() -> None:
     sa.Column('id', sa.String(length=36), nullable=False),
     sa.Column('workspace_id', sa.String(length=32), nullable=False),
     sa.Column('title', sa.String(length=200), nullable=False),
+    sa.Column('is_pinned', sa.Boolean(), nullable=False, server_default='false'),
+    sa.Column('is_favorite', sa.Boolean(), nullable=False, server_default='false'),
+    sa.Column('is_archived', sa.Boolean(), nullable=False, server_default='false'),
+    sa.Column('is_deleted', sa.Boolean(), nullable=False, server_default='false'),
+    sa.Column('deleted_at', sa.DateTime(), nullable=True),
+    sa.Column('share_token', sa.String(length=64), nullable=True),
+    sa.Column('summary', sa.String(length=1000), nullable=True),
+    sa.Column('tags', sa.String(length=500), nullable=True),
+    sa.Column('metadata_json', sa.String(length=2000), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('updated_at', sa.DateTime(), nullable=False),
     sa.ForeignKeyConstraint(['workspace_id'], ['workspaces.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_conversations_workspace_id'), 'conversations', ['workspace_id'], unique=False)
+    op.create_index(op.f('ix_conversations_share_token'), 'conversations', ['share_token'], unique=False)
     op.create_table('messages',
     sa.Column('id', sa.String(length=36), nullable=False),
     sa.Column('conversation_id', sa.String(length=36), nullable=False),
@@ -40,6 +50,10 @@ def upgrade() -> None:
     sa.Column('content', sa.Text(), nullable=False),
     sa.Column('provider', sa.String(length=50), nullable=True),
     sa.Column('model', sa.String(length=100), nullable=True),
+    sa.Column('system_prompt', sa.Text(), nullable=True),
+    sa.Column('attachments', sa.Text(), nullable=True),
+    sa.Column('strategy_used', sa.String(length=50), nullable=True),
+    sa.Column('routing_explanation_json', sa.Text(), nullable=True),
     sa.Column('prompt_tokens', sa.Integer(), nullable=False),
     sa.Column('completion_tokens', sa.Integer(), nullable=False),
     sa.Column('total_tokens', sa.Integer(), nullable=False),

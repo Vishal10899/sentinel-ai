@@ -5,6 +5,7 @@ from app.api.routers.health import router as health_router
 from app.api.routers.providers import router as providers_router
 from app.api.routers.routing import router as routing_router
 from app.api.routers.workspace import router as workspace_router
+from app.api.routers.users import router as users_router
 
 __all__ = (
     "auth_router",
@@ -14,4 +15,5 @@ __all__ = (
     "providers_router",
     "routing_router",
     "workspace_router",
+    "users_router",
 )

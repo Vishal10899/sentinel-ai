@@ -13,6 +13,8 @@ class CostEstimate:
     input_tokens: int
     output_tokens: int
     estimated_cost: Decimal
+    daily_forecast_usd: Decimal = Decimal("0.0")
+    monthly_forecast_usd: Decimal = Decimal("0.0")
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,3 +25,27 @@ class CostComparison:
     most_expensive: CostEstimate
     savings_amount: Decimal
     savings_percentage: Decimal
+    recommendations: tuple["CostSavingsRecommendation", ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class CostSavingsRecommendation:
+    """Cost optimization recommendation comparing a model to cheaper alternatives."""
+
+    current_model: str
+    recommended_model: str
+    savings_percentage: Decimal
+    savings_amount_usd: Decimal
+    suggestion_text: str
+
+
+@dataclass(frozen=True, slots=True)
+class BudgetStatus:
+    """Workspace budget status, percentage utilization, and warning triggers."""
+
+    workspace_id: str
+    monthly_budget_usd: Decimal
+    current_spend_usd: Decimal
+    percentage_used: Decimal
+    warning_status: str  # "normal", "warning_80", "warning_90", "exceeded"
+    hard_stop_triggered: bool = False

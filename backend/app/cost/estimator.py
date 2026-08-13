@@ -32,6 +32,8 @@ class CostEstimator:
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             estimated_cost=estimated_cost,
+            daily_forecast_usd=estimated_cost * Decimal("1000"),
+            monthly_forecast_usd=estimated_cost * Decimal("30000"),
         )
 
     def estimate_with_token_prices(
@@ -56,4 +58,6 @@ class CostEstimator:
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             estimated_cost=estimated_cost,
+            daily_forecast_usd=estimated_cost * Decimal("1000"),
+            monthly_forecast_usd=estimated_cost * Decimal("30000"),
         )

@@ -1,5 +1,6 @@
 """Authentication service backed by PostgreSQL."""
 
+import asyncio
 import base64
 import hashlib
 import hmac
@@ -62,6 +63,7 @@ class AuthService:
         name: str,
         email: str,
         password: str,
+        role: str | None = None,
     ) -> User:
 
         email = email.strip().lower()
@@ -78,7 +80,22 @@ class AuthService:
                 detail="An account already exists for this email",
             )
 
-        salt, password_hash = _hash(password)
+        salt, password_hash = await asyncio.to_thread(_hash, password)
+
+        # First-user rule check
+        from sqlalchemy import func
+        count_res = await db.execute(select(func.count(User.id)))
+        user_count = count_res.scalar() or 0
+
+        if email == settings.bootstrap_admin_email.lower() or (user_count == 0 and ("admin" in email or role == "ADMIN")):
+            assigned_role = "ADMIN"
+            target_role_id = "role-super-admin"
+        elif role == "MEMBER":
+            assigned_role = "MEMBER"
+            target_role_id = "role-viewer"
+        else:
+            assigned_role = "DEVELOPER"
+            target_role_id = "role-developer"
 
         user = User(
             id=secrets.token_hex(16),
@@ -86,18 +103,21 @@ class AuthService:
             email=email,
             salt=salt,
             password_hash=password_hash,
+            role=assigned_role,
         )
 
         db.add(user)
 
         await db.commit()
-        await db.refresh(user)
 
         await workspace_service.create_default_workspace(
             db=db,
             owner_id=user.id,
             owner_name=user.name,
         )
+
+        from app.rbac import role_repository
+        role_repository.assign_user_role(user.id, target_role_id)
 
         return user
 
@@ -122,8 +142,10 @@ class AuthService:
                 detail="Invalid email or password",
             )
 
+        _, computed_hash = await asyncio.to_thread(_hash, password, user.salt)
+
         if not hmac.compare_digest(
-            _hash(password, user.salt)[1],
+            computed_hash,
             user.password_hash,
         ):
             raise HTTPException(
@@ -131,7 +153,65 @@ class AuthService:
                 detail="Invalid email or password",
             )
 
+        from app.rbac import role_repository
+        if email == settings.bootstrap_admin_email.lower():
+            user.role = "ADMIN"
+            role_repository.assign_user_role(user.id, "role-super-admin")
+        elif getattr(user, "role", None) == "ADMIN":
+            role_repository.assign_user_role(user.id, "role-super-admin")
+        elif getattr(user, "role", None) == "DEVELOPER":
+            role_repository.assign_user_role(user.id, "role-developer")
+
         return user
+
+    def get_user_context(self, user: User) -> dict[str, object]:
+        from app.rbac import rbac_engine, role_repository
+        from app.tenancy.repository import tenancy_repository
+
+        if user.email and user.email.lower() == settings.bootstrap_admin_email.lower():
+            user.role = "ADMIN"
+            role_repository.assign_user_role(user.id, "role-super-admin")
+
+        user_role_val = getattr(user, "role", "DEVELOPER")
+        if user_role_val == "ADMIN":
+            role_repository.assign_user_role(user.id, "role-super-admin")
+
+        role = role_repository.get_user_role(user.id)
+        effective_permissions = rbac_engine.get_user_effective_permissions(user.id)
+
+        memberships = tenancy_repository.list_members(org_id=None)
+        user_mem = next((m for m in memberships if m.user_id == user.id), None)
+
+        org_id = user_mem.org_id if user_mem else "org-default"
+        workspace_id = user_mem.workspace_id if user_mem else "default"
+
+        org = tenancy_repository.get_organization(org_id)
+        ws = tenancy_repository.get_workspace(workspace_id)
+
+        return {
+            "user": {
+                "user_id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "role": user_role_val,
+            },
+            "organization": {
+                "id": org.id if org else "org-default",
+                "name": org.name if org else "Sentinel Enterprise",
+                "slug": org.slug if org else "sentinel-enterprise",
+            },
+            "workspace": {
+                "id": ws.id if ws else "default",
+                "name": ws.name if ws else "Default Production Workspace",
+                "slug": ws.slug if ws else "default",
+            },
+            "role": {
+                "id": role.id,
+                "name": role.name,
+                "is_builtin": role.is_builtin,
+            },
+            "permissions": effective_permissions,
+        }
 
     def _token(
         self,
@@ -194,16 +274,14 @@ class AuthService:
             ),
         )
 
+        context = self.get_user_context(user)
         return {
             "access_token": access_token,
             "refresh_token": refresh_token,
             "token_type": "bearer",
-            "user": {
-                "user_id": user.id,
-                "name": user.name,
-                "email": user.email,
-            },
+            **context,
         }
+
 
     async def user_from_token(
         self,

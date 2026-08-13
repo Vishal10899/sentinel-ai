@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
-import { Copy, Check, RotateCcw } from "lucide-react";
-import { Badge } from "../ui";
+import { useMemo, useState } from "react";
+import { Copy, Check, RotateCcw, Sparkles, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
+import { Badge } from "../ui";
 
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -436,13 +437,15 @@ function Markdown({ content = "" }) {
     </ReactMarkdown>
   );
 }
-
 export default function MessageBubble({
   message,
   onCopy,
   onRetry,
 }) {
+  const [showDetails, setShowDetails] = useState(false);
   const assistant = message.role === "assistant";
+  const isTool = message.role === "tool";
+  const isSystem = message.role === "system";
 
   const timestamp = useMemo(() => {
     return new Date(
@@ -455,95 +458,166 @@ export default function MessageBubble({
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(
-        message.content || ""
-      );
-
+      await navigator.clipboard.writeText(message.content || "");
       onCopy?.(message.content);
     } catch (error) {
       console.error(error);
     }
   };
 
+  const statusText = message.statusText || (message.isModelLoadingVram ? "Loading local model into VRAM..." : "Understanding your request...");
+
   return (
     <article
       className={`flex ${
-        assistant
+        assistant || isTool || isSystem
           ? "justify-start"
           : "justify-end"
       }`}
     >
       <div
-        className={`max-w-[90%] rounded-2xl px-4 py-3 shadow-sm transition-all ${
+        className={`max-w-[90%] sm:max-w-[85%] rounded-2xl px-4 py-3.5 shadow-sm transition-all ${
           assistant
-            ? "border border-white/10 bg-white/[0.045]"
-            : "bg-indigo-600 text-white"
+            ? "border border-[var(--border-color)] bg-[var(--bg-surface)] text-[var(--text-primary)]"
+            : isTool
+            ? "border border-amber-500/30 bg-amber-500/10 text-amber-400"
+            : isSystem
+            ? "border border-purple-500/30 bg-purple-500/10 text-purple-400"
+            : "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
         }`}
       >
+        {(isTool || isSystem) && (
+          <div className="mb-2 font-mono text-[10px] uppercase font-bold text-amber-400">
+            [{message.role.toUpperCase()} OUTPUT]
+          </div>
+        )}
+
         <div className="break-words text-sm leading-7">
-          {assistant ? (
-            <Markdown
-              content={message.content}
-            />
+          {message.error ? (
+            <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 my-2 text-red-300">
+              <div className="flex items-center gap-2 font-bold text-sm text-red-400 mb-1">
+                <AlertTriangle className="h-4 w-4 text-red-400 shrink-0" />
+                <span>Provider Execution Failed</span>
+              </div>
+              <p className="text-xs text-red-300/90 leading-relaxed mb-3">
+                {message.error}
+              </p>
+              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-red-500/20">
+                {onRetry && (
+                  <button
+                    onClick={onRetry}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-200 text-xs font-semibold transition cursor-pointer"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" /> Retry
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    if (typeof window !== "undefined") {
+                      window.dispatchEvent(new CustomEvent("open-trace-drawer"));
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs font-medium transition cursor-pointer"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-amber-400" /> View Telemetry
+                </button>
+              </div>
+            </div>
+          ) : assistant && !message.content ? (
+            /* Single Dynamic Status Line inside Assistant Bubble before first token arrives */
+            <div className="flex items-center gap-2.5 py-1 text-xs font-medium text-indigo-400 animate-fadeIn">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-500/10 border border-indigo-500/20 shrink-0">
+                <Sparkles className="h-3.5 w-3.5 animate-spin text-indigo-400" />
+              </div>
+              <span className="font-mono text-slate-300 tracking-tight">{statusText}</span>
+            </div>
+          ) : assistant || isTool ? (
+            /* Streamed Response Markdown inside Assistant Bubble */
+            <div className="relative">
+              <Markdown content={message.content} />
+              {message.isGenerating && (
+                <span className="inline-block h-4 w-1.5 ml-1 bg-indigo-400 animate-pulse rounded-sm align-middle" />
+              )}
+            </div>
           ) : (
-            <p className="whitespace-pre-wrap">
-              {message.content}
-            </p>
+            <p className="whitespace-pre-wrap">{message.content}</p>
           )}
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
-
-          {assistant && (
-            <>
-              <button
-                onClick={handleCopy}
-                className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition hover:bg-white/5 hover:text-white"
-              >
-                <Copy className="h-3.5 w-3.5" />
-                Copy
-              </button>
-
-              {onRetry && (
+        {/* Footer & Expandable Telemetry Metadata */}
+        {assistant && (
+          <div className="mt-3.5 border-t border-[var(--border-color)] pt-2.5">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--text-muted)]">
+              {message.content && (
                 <button
-                  onClick={onRetry}
-                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition hover:bg-white/5 hover:text-white"
+                  onClick={handleCopy}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] cursor-pointer"
+                  title="Copy to clipboard"
                 >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  Retry
+                  <Copy className="h-3.5 w-3.5" />
+                  Copy
                 </button>
               )}
 
+              {onRetry && !message.isGenerating && (
+                <button
+                  onClick={onRetry}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] cursor-pointer"
+                  title="Regenerate response"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 text-indigo-400" />
+                  Regenerate
+                </button>
+              )}
+
+              {/* Compact Provider • Model Pill */}
               {message.provider && (
-                <Badge tone="indigo">
-                  {message.provider}
+                <Badge variant="indigo" className="font-mono text-[10px]">
+                  {message.provider} • {message.model || "auto"}
                 </Badge>
               )}
 
-              {message.model && (
-                <Badge>
-                  {message.model}
-                </Badge>
+              {/* Expandable Telemetry Toggle */}
+              {(message.total_tokens != null || message.tokens != null || message.latency_ms != null || message.cost_usd != null) && (
+                <button
+                  onClick={() => setShowDetails(!showDetails)}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition text-[10px] font-mono text-indigo-400 hover:bg-indigo-500/10 cursor-pointer"
+                >
+                  <span>Telemetry</span>
+                  {showDetails ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                </button>
               )}
 
-              {message.tokens != null && (
-                <Badge tone="emerald">
-                  {message.tokens} tokens
-                </Badge>
-              )}
+              <span className="ml-auto font-mono text-[10px]">
+                {timestamp}
+              </span>
+            </div>
 
-              {message.latency_ms != null && (
-                <Badge tone="slate">
-                  {message.latency_ms} ms
-                </Badge>
-              )}
-            </>
-          )}
-
-          <span className="ml-auto">
-            {timestamp}
-          </span>
-        </div>
+            {/* Expandable Execution Details Drawer */}
+            {showDetails && (
+              <div className="mt-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] p-3 space-y-2 text-[11px] font-mono animate-fadeIn">
+                <div className="flex items-center justify-between text-[var(--text-muted)] border-b border-[var(--border-color)]/50 pb-1.5">
+                  <span className="font-bold text-indigo-400 uppercase tracking-wider text-[10px]">Execution Telemetry</span>
+                  <span>{message.provider}/{message.model}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center pt-1">
+                  <div className="rounded-lg bg-[var(--bg-surface)] p-1.5 border border-[var(--border-color)]">
+                    <span className="text-[9px] text-[var(--text-muted)] block">Tokens</span>
+                    <strong className="text-emerald-400">{message.total_tokens ?? message.tokens ?? 0}</strong>
+                  </div>
+                  <div className="rounded-lg bg-[var(--bg-surface)] p-1.5 border border-[var(--border-color)]">
+                    <span className="text-[9px] text-[var(--text-muted)] block">Latency</span>
+                    <strong className="text-cyan-400">{message.latency_ms ? `${message.latency_ms} ms` : "—"}</strong>
+                  </div>
+                  <div className="rounded-lg bg-[var(--bg-surface)] p-1.5 border border-[var(--border-color)]">
+                    <span className="text-[9px] text-[var(--text-muted)] block">Est. Cost</span>
+                    <strong className="text-amber-400">{message.cost_usd != null ? `$${Number(message.cost_usd).toFixed(4)}` : "$0.0000"}</strong>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </article>
   );

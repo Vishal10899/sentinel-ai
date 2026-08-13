@@ -88,10 +88,6 @@ async def logout(
 @router.get("/me")
 async def me(
     user: User = Depends(current_user),
-) -> dict[str, str]:
+) -> dict[str, object]:
 
-    return {
-        "user_id": str(user.id),
-        "name": user.name,
-        "email": user.email,
-    }
+    return auth_service.get_user_context(user)

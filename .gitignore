@@ -1,18 +1,47 @@
-# Python
+# Dependencies & Virtual Environments
+.venv/
+venv/
+node_modules/
+frontend/node_modules/
+
+# Build & Cache Directories
+.next/
+frontend/.next/
+dist/
+build/
+target/
 __pycache__/
 *.py[cod]
-.venv/
+.pytest_cache/
+frontend/.turbo/
 
-# Node.js / Next.js
-frontend/node_modules/
-frontend/.next/
-
-# Environment files
+# Environment & Secret Files
 .env
+.env.local
 .env.*
 !.env.example
+*.pem
+*.key
 
-# Local service data
+# System, Editor & Artifact Junk
+.DS_Store
+.idea/
+.vscode/
+*.log
+*.zip
+*.lnk
+backend_tree.txt
+
+# Local Service Data & Storage
 postgres_data/
 redis_data/
 qdrant_data/
+
+uploads/*
+!uploads/.gitkeep
+
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+backend/scratch/*
+!backend/scratch/.gitkeep
