@@ -297,7 +297,7 @@ async def list_models(
     provider_id: str | None = Query(default=None),
     category: str | None = Query(default=None),
     enabled_only: bool = Query(default=False),
-    user: User = Depends(current_user),
+    user: User = Depends(require_permission("view_models")),
 ) -> list[ModelResponse]:
     """Return registry models, optionally filtered by provider, category, and enabled state."""
     return [
@@ -333,7 +333,7 @@ async def list_models(
 
 
 @router.get("/models/{provider_id}/{model_id}", response_model=ModelResponse, summary="Get model metadata")
-async def get_model_detail(provider_id: str, model_id: str, user: User = Depends(current_user)) -> ModelResponse:
+async def get_model_detail(provider_id: str, model_id: str, user: User = Depends(require_permission("view_models"))) -> ModelResponse:
     """Return metadata for a single model by provider and model identifier."""
     try:
         model = model_registry.get_model(provider_id, model_id)

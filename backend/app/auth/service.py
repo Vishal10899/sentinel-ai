@@ -306,17 +306,21 @@ class AuthService:
 
         if user.email and settings.is_super_admin_email(user.email):
             role_repository.assign_user_role(user.id, "role-super-admin")
+        elif not role_repository.has_user_role(user.id):
+            user_mem = tenancy_repository.get_user_membership(user.id)
+            if not user_mem:
+                memberships = tenancy_repository.list_members(org_id=None)
+                user_mem = next((m for m in memberships if m.user_id == user.id), None)
+            if user_mem and user_mem.role_id:
+                role_repository.assign_user_role(user.id, user_mem.role_id)
+
+        role = role_repository.get_user_role(user.id)
+        effective_permissions = rbac_engine.get_user_effective_permissions(user.id)
 
         user_mem = tenancy_repository.get_user_membership(user.id)
         if not user_mem:
             memberships = tenancy_repository.list_members(org_id=None)
             user_mem = next((m for m in memberships if m.user_id == user.id), None)
-
-        if user_mem and user_mem.role_id:
-            role_repository.assign_user_role(user.id, user_mem.role_id)
-
-        role = role_repository.get_user_role(user.id)
-        effective_permissions = rbac_engine.get_user_effective_permissions(user.id)
 
         org_id = user_mem.org_id if user_mem else "org-default"
         workspace_id = user_mem.workspace_id if user_mem else "default"
@@ -335,7 +339,8 @@ class AuthService:
                 "user_id": user.id,
                 "name": user.name,
                 "email": user.email,
-                "role": role.id,
+                "role": user.role,
+                "role_id": role.id,
                 "role_name": role.name,
                 "is_owner": is_owner,
                 "title": user_title,
